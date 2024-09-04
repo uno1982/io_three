@@ -8,6 +8,7 @@ LOG_FILE = None
 LOGGER = None
 
 LEVELS = {
+    constants.DISABLED: logging.NOTSET,
     constants.DEBUG: logging.DEBUG,
     constants.INFO: logging.INFO,
     constants.WARNING: logging.WARNING,

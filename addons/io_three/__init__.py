@@ -40,16 +40,14 @@ bl_info = {
     'name': "Three.js Format",
     'author': "repsac, mrdoob, yomotsu, mpk, jpweeks, rkusa, tschw",
     'version': (1, 4, 0),
-    'blender': (2, 73, 0),
+    'blender': (3, 6, 0),
     'location': "File > Export",
     'description': "Export Three.js formatted JSON files.",
     'warning': "Importer not included.",
-    'wiki_url': "https://github.com/mrdoob/three.js/tree/"\
-        "master/utils/exporters/blender",
+    'wiki_url': "https://github.com/mrdoob/three.js/tree/master/utils/exporters/blender",
     'tracker_url':  "https://github.com/mrdoob/three.js/issues",
     'category': 'Import-Export'
 }
-
 
 def _geometry_types():
     """The valid geometry types that are supported by Three.js
@@ -427,57 +425,56 @@ def restore_export_settings(properties, settings):
         constants.EXPORT_OPTIONS[constants.FRAME_INDEX_AS_TIME])
     ## }
 
-def set_settings(properties):
+def set_settings(cls):
     """Set the export settings to the correct keys.
 
-    :param properties:
+    :param cls: The `ExportThree` class
     :returns: settings
     :rtype: dict
 
     """
     settings = {
-        constants.VERTICES: properties.option_vertices,
-        constants.FACES: properties.option_faces,
-        constants.NORMALS: properties.option_normals,
-        constants.SKINNING: properties.option_skinning,
-        constants.BONES: properties.option_bones,
-        constants.EXTRA_VGROUPS: properties.option_extra_vgroups,
-        constants.APPLY_MODIFIERS: properties.option_apply_modifiers,
-        constants.GEOMETRY_TYPE: properties.option_geometry_type,
-        constants.INDEX_TYPE: properties.option_index_type,
+        constants.VERTICES: cls.option_vertices,
+        constants.FACES: cls.option_faces,
+        constants.NORMALS: cls.option_normals,
+        constants.SKINNING: cls.option_skinning,
+        constants.BONES: cls.option_bones,
+        constants.EXTRA_VGROUPS: cls.option_extra_vgroups,
+        constants.APPLY_MODIFIERS: cls.option_apply_modifiers,
+        constants.GEOMETRY_TYPE: cls.option_geometry_type,
+        constants.INDEX_TYPE: cls.option_index_type,
 
-        constants.MATERIALS: properties.option_materials,
-        constants.UVS: properties.option_uv_coords,
-        constants.FACE_MATERIALS: properties.option_face_materials,
-        constants.MAPS: properties.option_maps,
-        constants.COLORS: properties.option_colors,
-        constants.MIX_COLORS: properties.option_mix_colors,
+        constants.MATERIALS: cls.option_materials,
+        constants.UVS: cls.option_uv_coords,
+        constants.FACE_MATERIALS: cls.option_face_materials,
+        constants.MAPS: cls.option_maps,
+        constants.COLORS: cls.option_colors,
+        constants.MIX_COLORS: cls.option_mix_colors,
 
-        constants.SCALE: properties.option_scale,
-        constants.ENABLE_PRECISION: properties.option_round_off,
-        constants.PRECISION: properties.option_round_value,
-        constants.LOGGING: properties.option_logging,
-        constants.COMPRESSION: properties.option_compression,
-        constants.INDENT: properties.option_indent,
-        constants.COPY_TEXTURES: properties.option_copy_textures,
-        constants.TEXTURE_FOLDER: properties.option_texture_folder,
+        constants.SCALE: cls.option_scale,
+        constants.ENABLE_PRECISION: cls.option_round_off,
+        constants.PRECISION: cls.option_round_value,
+        constants.LOGGING: cls.option_logging,
+        constants.COMPRESSION: cls.option_compression,
+        constants.INDENT: cls.option_indent,
+        constants.COPY_TEXTURES: cls.option_copy_textures,
+        constants.TEXTURE_FOLDER: cls.option_texture_folder,
 
-        constants.SCENE: properties.option_export_scene,
-        #constants.EMBED_GEOMETRY: properties.option_embed_geometry,
-        constants.EMBED_ANIMATION: properties.option_embed_animation,
-        constants.LIGHTS: properties.option_lights,
-        constants.CAMERAS: properties.option_cameras,
-        constants.HIERARCHY: properties.option_hierarchy,
+        constants.SCENE: cls.option_export_scene,
+        #constants.EMBED_GEOMETRY: cls.option_embed_geometry,
+        constants.EMBED_ANIMATION: cls.option_embed_animation,
+        constants.LIGHTS: cls.option_lights,
+        constants.CAMERAS: cls.option_cameras,
+        constants.HIERARCHY: cls.option_hierarchy,
 
-        constants.MORPH_TARGETS: properties.option_animation_morph,
-        constants.ANIMATION: properties.option_animation_skeletal,
-        constants.FRAME_STEP: properties.option_frame_step,
-        constants.FRAME_INDEX_AS_TIME: properties.option_frame_index_as_time,
-        constants.INFLUENCES_PER_VERTEX: properties.option_influences
+        constants.MORPH_TARGETS: cls.option_animation_morph,
+        constants.ANIMATION: cls.option_animation_skeletal,
+        constants.FRAME_STEP: cls.option_frame_step,
+        constants.FRAME_INDEX_AS_TIME: cls.option_frame_index_as_time,
+        constants.INFLUENCES_PER_VERTEX: cls.option_influences
     }
 
     return settings
-
 
 def compression_types():
     """Supported compression formats
@@ -495,7 +492,6 @@ def compression_types():
         pass
 
     return types
-
 
 def animation_options():
     """The supported skeletal animation types
@@ -755,7 +751,7 @@ class ExportThree(bpy.types.Operator, ExportHelper):
         if not self.properties.filepath:
             raise Exception("filename not set")
 
-        settings = set_settings(self.properties)
+        settings = set_settings(self.__class__)
         settings['addon_version'] = bl_info['version']
 
         filepath = self.filepath
@@ -850,7 +846,6 @@ class ExportThree(bpy.types.Operator, ExportHelper):
 
         row = layout.row()
         row.prop(self.properties, 'option_embed_animation')
-
         ## }
 
         layout.separator()
@@ -920,11 +915,9 @@ class ExportThree(bpy.types.Operator, ExportHelper):
         row = layout.row()
         row.operator(
             ThreeExportSettings.bl_idname,
-            ThreeExportSettings.bl_label,
+            text=ThreeExportSettings.bl_label,
             icon="%s" % "PINNED" if has_settings else "UNPINNED")
         ## }
-
-
 
 def menu_func_export(self, context):
     """
@@ -938,18 +931,26 @@ def menu_func_export(self, context):
     operator = self.layout.operator(ExportThree.bl_idname, text=text)
     operator.filepath = default_path
 
+classes = (
+    ThreeMesh,
+    ThreeMaterial,
+    ThreeTexture,
+    ThreeObject,
+    ExportThree,
+    ThreeExportSettings
+)
 
 def register():
     """Registers the addon (Blender boilerplate)"""
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_file_export.append(menu_func_export)
-
+    for cls in classes:
+        bpy.utils.register_class(cls)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
 
 def unregister():
     """Unregisters the addon (Blender boilerplate)"""
-    bpy.utils.unregister_module(__name__)
-    bpy.types.INFO_MT_file_export.remove(menu_func_export)
-
+    for cls in classes:
+        bpy.utils.unregister_class(cls)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
 
 if __name__ == '__main__':
     register()
