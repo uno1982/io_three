@@ -96,9 +96,14 @@ def cast_shadow(obj):
             ret = None
         return ret
     elif obj.type == MESH:
-        mat = material(obj)
-        if mat:
-            return data.materials[mat].use_cast_shadows
+        mat_name = material(obj)
+        if mat_name:
+            mat = data.materials[mat_name]
+            if mat.use_nodes:
+                for node in mat.node_tree.nodes:
+                    if node.type == 'OUTPUT_MATERIAL' and node.inputs['Surface'].is_linked:
+                        return True
+            return False
         else:
             return False
 
@@ -149,7 +154,7 @@ def mesh(obj, options):
     else:
         logger.debug('Could not map object, updating manifest')
         mesh_ = extract_mesh(obj, options)
-        if len(mesh_.tessfaces) is not 0:
+        if len(mesh_.loop_triangles) is not 0:
             manifest = _MESH_MAP.setdefault(mesh_.name, [])
             manifest.append(obj)
             mesh_name = mesh_.name
@@ -236,10 +241,16 @@ def receive_shadow(obj):
     :param obj:
 
     """
+    logger.debug('object.receive_shadow(%s)', obj)
     if obj.type == MESH:
-        mat = material(obj)
-        if mat:
-            return data.materials[mat].use_shadows
+        mat_name = material(obj)
+        if mat_name:
+            mat = data.materials[mat_name]
+            if mat.use_nodes:
+                for node in mat.node_tree.nodes:
+                    if node.type == 'OUTPUT_MATERIAL' and node.inputs['Surface'].is_linked:
+                        return True
+            return False
         else:
             return False
 
@@ -290,13 +301,13 @@ def scale(obj, options):
 
 
 @_object
-def select(obj):
+def select(obj, state=True):
     """
 
     :param obj:
 
     """
-    obj.select = True
+    obj.select_set(state)
 
 
 @_object
@@ -306,7 +317,7 @@ def unselect(obj):
     :param obj:
 
     """
-    obj.select = False
+    obj.select_set(False)
 
 
 @_object
@@ -317,7 +328,8 @@ def visible(obj):
 
     """
     logger.debug('object.visible(%s)', obj)
-    return obj.is_visible(context.scene)
+    view_layer = bpy.context.view_layer
+    return obj.visible_get(view_layer=view_layer)
 
 
 def extract_mesh(obj, options, recalculate=False):
@@ -332,7 +344,7 @@ def extract_mesh(obj, options, recalculate=False):
     apply_modifiers = options.get(constants.APPLY_MODIFIERS, True)
     if apply_modifiers:
         bpy.ops.object.mode_set(mode='OBJECT')
-    mesh_node = obj.to_mesh(context.scene, apply_modifiers, RENDER)
+    mesh_node = obj.to_mesh(preserve_all_data_layers=False, depsgraph=context.evaluated_depsgraph_get())
 
     # transfer the geometry type to the extracted mesh
     mesh_node.THREE_geometry_type = obj.data.THREE_geometry_type
@@ -394,15 +406,23 @@ def extract_mesh(obj, options, recalculate=False):
             index += 1
         except KeyError:
             break
-    mesh_node.name = mesh_name
+    
+    # Create a new mesh with the desired name and copy data
+    new_mesh = bpy.data.meshes.new(name=mesh_name)
+    new_mesh = mesh_node.copy()
 
-    mesh_node.update(calc_tessface=True)
-    mesh_node.calc_normals()
-    mesh_node.calc_tessface()
+    new_mesh.update(calc_edges=True, calc_edges_loose=True)
+    new_mesh.calc_normals()
+    # Ensure scale_ is a real number
     scale_ = options.get(constants.SCALE, 1)
-    mesh_node.transform(mathutils.Matrix.Scale(scale_, 4))
+    if isinstance(scale_, (int, float)):
+        scale_ = float(scale_)
+    else:
+        scale_ = 1.0  # Default to 1.0 if scale_ is not a real number
 
-    return mesh_node
+    new_mesh.transform(mathutils.Matrix.Scale(scale_, 4))
+
+    return new_mesh
 
 
 def objects_using_mesh(mesh_node):
@@ -484,33 +504,33 @@ def extracted_meshes():
 
 def _on_visible_layer(obj, visible_layers):
     """
-
-    :param obj:
-    :param visible_layers:
-
+    Check if the object is on a visible layer.
+    :param obj: Object to check
+    :param visible_layers: List of visible layers
+    :return: True if the object is on a visible layer, False otherwise
     """
-    is_visible = False
-    for index, layer in enumerate(obj.layers):
-        if layer and index in visible_layers:
-            is_visible = True
-            break
-
-    if not is_visible:
-        logger.info('%s is on a hidden layer', obj.name)
-
-    return is_visible
+    logger.debug("object._on_visible_layer(%s)", obj)
+    if hasattr(obj, 'visible_get'):
+        return obj.visible_get()
+    else:
+        logger.warning("Object has no attribute 'visible_get'")
+        return False
 
 
 def _visible_scene_layers():
     """
-
-    :return: list of visiible layer indices
-
+    :return: list of visible layers in the scene
+    :rtype: list
     """
+    logger.debug("object._visible_scene_layers()")
     visible_layers = []
-    for index, layer in enumerate(context.scene.layers):
-        if layer:
-            visible_layers.append(index)
+    context = bpy.context
+
+    # Use view_layers instead of layers
+    for view_layer in context.scene.view_layers:
+        if view_layer.use:
+            visible_layers.append(view_layer)
+
     return visible_layers
 
 
@@ -548,7 +568,7 @@ def _valid_node(obj, valid_types, options):
     # faces are detected then bow out
     if is_mesh:
         mesh_node = data.meshes[mesh_node]
-        if len(mesh_node.tessfaces) is 0:
+        if len(mesh_node.loop_triangles) is 0:
             return False
 
     # if we get this far assume that the mesh is valid

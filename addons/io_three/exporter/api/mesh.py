@@ -3,7 +3,7 @@ Blender API for querying mesh data. Animation data is also
 handled here since Three.js associates the animation (skeletal,
 morph targets) with the geometry nodes.
 """
-
+import bpy
 import operator
 import re
 from bpy import data, types, context
@@ -117,7 +117,7 @@ def buffer_normal(mesh):
     """
     normals_ = []
 
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
         vert_count = len(face.vertices)
         if vert_count is not 3:
             msg = "Non-triangulated face detected"
@@ -141,7 +141,7 @@ def buffer_position(mesh):
     """
     position = []
 
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
         vert_count = len(face.vertices)
         if vert_count is not 3:
             msg = "Non-triangulated face detected"
@@ -192,10 +192,16 @@ def extra_vertex_groups(mesh, patterns_string):
 
     """
     logger.debug("mesh._extra_vertex_groups(%s)", mesh)
+    
+    # Ensure patterns_string is a real string
+    if isinstance(patterns_string, bpy.props._PropertyDeferred):
+        patterns_string = str(patterns_string)
+
+    if not patterns_string.strip():
+        return []
+
     pattern_re = None
     extra_vgroups = []
-    if not patterns_string.strip():
-        return extra_vgroups
     armature = _armature(mesh)
     obj = object_.objects_using_mesh(mesh)[0]
     for vgroup_index, vgroup in enumerate(obj.vertex_groups):
@@ -258,7 +264,7 @@ def buffer_vertex_group_data(mesh, index):
 
     """
     group_data = []
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
         for vertex_index in face.vertices:
             vertex = mesh.vertices[vertex_index]
             weight = None
@@ -282,7 +288,7 @@ def faces(mesh, options, material_list=None):
                  mesh, options, materials)
 
     material_list = material_list or []
-    vertex_uv = len(mesh.uv_textures) > 0
+    vertex_uv = len(mesh.uv_layers) > 0
     has_colors = len(mesh.vertex_colors) > 0
     logger.info("Has UVs = %s", vertex_uv)
     logger.info("Has vertex colours = %s", has_colors)
@@ -314,17 +320,15 @@ def faces(mesh, options, material_list=None):
         for index, normal in enumerate(vertex_normals):
             normal_indices[str(normal)] = index
 
-    logger.info("Parsing %d faces", len(mesh.tessfaces))
-    for face in mesh.tessfaces:
-        vert_count = len(face.vertices)
+    logger.info("Parsing %d faces", len(mesh.loop_triangles))
+    for loop_triangle in mesh.loop_triangles:
+        vert_count = len(loop_triangle.vertices)
 
         if vert_count not in (3, 4):
-            logger.error("%d vertices for face %d detected",
-                         vert_count,
-                         face.index)
+            logger.error("%d vertices for face %d detected", vert_count, loop_triangle.index)
             raise exceptions.NGonError("ngons are not supported")
 
-        mat_index = face.material_index is not None and opt_materials
+        mat_index = loop_triangle.material_index is not None and opt_materials
         mask = {
             constants.QUAD: vert_count is 4,
             constants.MATERIALS: mat_index,
@@ -335,38 +339,36 @@ def faces(mesh, options, material_list=None):
 
         face_data = []
 
-        face_data.extend([v for v in face.vertices])
+        face_data.extend([v for v in loop_triangle.vertices])
 
         if mask[constants.MATERIALS]:
             for mat_index, mat in enumerate(material_list):
-                if mat[constants.DBG_INDEX] == face.material_index:
+                if mat[constants.DBG_INDEX] == loop_triangle.material_index:
                     face_data.append(mat_index)
                     break
             else:
-                error = ("Could not map the material index "
-                         "for face %d" % face.index)
+                error = "Could not map the material index for face %d" % loop_triangle.index
                 raise exceptions.MaterialError(error)
 
         if uv_indices:
             for index, uv_layer in enumerate(uv_indices):
-                layer = mesh.tessface_uv_textures[index]
-
-                for uv_data in layer.data[face.index].uv:
-                    uv_tuple = (uv_data[0], uv_data[1])
+                layer = mesh.uv_layers[index]
+                for loop_index in loop_triangle.loops:
+                    uv_data = layer.data[loop_index].uv
+                    uv_tuple = (uv_data.x, uv_data.y)
                     uv_index = uv_layer[str(uv_tuple)]
                     face_data.append(uv_index)
                     mask[constants.UVS] = True
 
         if vertex_normals:
-            for vertex in face.vertices:
+            for vertex in loop_triangle.vertices:
                 normal = mesh.vertices[vertex].normal
                 normal = (normal.x, normal.y, normal.z)
                 face_data.append(normal_indices[str(normal)])
                 mask[constants.NORMALS] = True
 
         if vertex_colours:
-            colours = mesh.tessface_vertex_colors.active.data[face.index]
-
+            colours = mesh.vertex_colors.active.data[loop_triangle.index]
             for each in (colours.color1, colours.color2, colours.color3):
                 each = utilities.rgb2int(each)
                 face_data.append(colour_indices[str(each)])
@@ -385,51 +387,13 @@ def faces(mesh, options, material_list=None):
 @_mesh
 def morph_targets(mesh, options):
     """
-
     :param mesh:
     :param options:
 
     """
     logger.debug("mesh.morph_targets(%s, %s)", mesh, options)
-    obj = object_.objects_using_mesh(mesh)[0]
-    original_frame = context.scene.frame_current
-    frame_step = options.get(constants.FRAME_STEP, 1)
-    scene_frames = range(context.scene.frame_start,
-                         context.scene.frame_end+1,
-                         frame_step)
-
-    morphs = []
-
-    for frame in scene_frames:
-        logger.info("Processing data at frame %d", frame)
-        context.scene.frame_set(frame, 0.0)
-        morphs.append([])
-        vertices_ = object_.extract_mesh(obj, options).vertices[:]
-
-        for vertex in vertices_:
-            morphs[-1].extend([vertex.co.x, vertex.co.y, vertex.co.z])
-
-    context.scene.frame_set(original_frame, 0.0)
-    morphs_detected = False
-    for index, each in enumerate(morphs):
-        if index is 0:
-            continue
-        morphs_detected = morphs[index-1] != each
-        if morphs_detected:
-            logger.info("Valid morph target data detected")
-            break
-    else:
-        logger.info("No valid morph data detected")
-        return []
-
-    manifest = []
-    for index, morph in enumerate(morphs):
-        manifest.append({
-            constants.NAME: 'animation_%06d' % index,
-            constants.VERTICES: morph
-        })
-
-    return manifest
+    ##Don't return morphs
+    return []
 
 
 @_mesh
@@ -443,7 +407,7 @@ def materials(mesh, options):
     logger.debug("mesh.materials(%s, %s)", mesh, options)
 
     indices = []
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
         if face.material_index not in indices:
             indices.append(face.material_index)
 
@@ -495,7 +459,7 @@ def materials(mesh, options):
                 constants.COLOR_SPECULAR: material.specular_color(mat)
             })
 
-        if mesh.show_double_sided:
+        if not mat.use_backface_culling:
             logger.info("Double sided is on")
             attributes[constants.DOUBLE_SIDED] = True
 
@@ -662,7 +626,7 @@ def vertex_colors(mesh):
         logger.info("No vertex colours found")
         return
 
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
 
         colours = (vertex_colour[face.index].color1,
                    vertex_colour[face.index].color2,
@@ -829,7 +793,7 @@ def _normals(mesh):
     vectors = []
 
     vectors_ = {}
-    for face in mesh.tessfaces:
+    for face in mesh.loop_triangles:
 
         for vertex_index in face.vertices:
             normal = mesh.vertices[vertex_index].normal

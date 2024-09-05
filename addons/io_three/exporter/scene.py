@@ -231,7 +231,10 @@ class Scene(base_classes.BaseScene):
         for texture_name in api.texture.textures():
             logger.info("Parsing texture %s", texture_name)
             tex_inst = texture.Texture(texture_name, self)
-            textures.append(tex_inst)
+            if tex_inst.image is not None:
+                textures.append(tex_inst)
+            else:
+                logger.warning("image is None for texture %s", texture_name)
 
         logger.info("Added %d texture nodes", len(textures))
         self[constants.TEXTURES] = textures

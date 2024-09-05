@@ -1,3 +1,4 @@
+import bpy
 import json
 from .. import constants
 
@@ -5,9 +6,21 @@ ROUND = constants.DEFAULT_PRECISION
 
 ## THREE override function
 def _json_floatstr(o):
+    print(f"Debug: Processing value {o} of type {type(o)}")
+    if isinstance(o, bpy.props._PropertyDeferred):
+        print(f"Debug: _PropertyDeferred detected with default value {o.default}")
+        try:
+            o = float(o.default)
+        except (TypeError, ValueError) as e:
+            print(f"Error converting _PropertyDeferred to float: {e}")
+            o = 0.0  # Fallback to a default value if conversion fails
     if ROUND is not None:
-        o = round(o, ROUND)
-        
+        try:
+            o = round(o, ROUND)
+        except TypeError as e:
+            print(f"Error rounding value {o}: {e}")
+            o = float(o)  # Ensure o is a float before rounding
+    print(f"Debug: Final value {o}")
     return '%g' % o
 
 

@@ -73,7 +73,13 @@ def dump(filepath, data, options=None):
 
     logger.info("Writing to %s", filepath)
     with open(filepath, mode=mode) as stream:
+        print(f"Debug: Dumping data {data} with options {options}")
         func(data, stream)
+
+def _json_floatstr(o):
+    if isinstance(o, bpy.props._PropertyDeferred):
+        o = float(o.default)
+    return format(o, '.6f')
 
 
 def load(filepath, options):

@@ -10,7 +10,7 @@ def active_object():
     :return: The actively selected object
 
     """
-    return bpy.context.scene.objects.active
+    return bpy.context.view_layer.objects.active
 
 
 def batch_mode():
@@ -65,7 +65,7 @@ def set_active_object(obj):
 
     """
     logger.debug("api.set_active_object(%s)", obj)
-    bpy.context.scene.objects.active = obj
+    bpy.context.view_layer.objects.active = obj
 
 
 def scene_name():

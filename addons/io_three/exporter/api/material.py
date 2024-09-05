@@ -32,17 +32,20 @@ def _material(func):
 @_material
 def ambient_color(material):
     """
-
     :param material:
     :return: rgb value
     :rtype: tuple
-
     """
     logger.debug("material.ambient_color(%s)", material)
     diffuse = diffuse_color(material)
-    return (material.ambient * diffuse[0],
-            material.ambient * diffuse[1],
-            material.ambient * diffuse[2])
+    if hasattr(material, 'ambient'):
+        return (material.ambient * diffuse[0],
+                material.ambient * diffuse[1],
+                material.ambient * diffuse[2])
+    else:
+        # Fallback if ambient does not exist
+        logger.warning("Material object has no attribute 'ambient'")
+        return (diffuse[0], diffuse[1], diffuse[2])
 
 
 @_material
@@ -145,16 +148,20 @@ def double_sided(material):
 @_material
 def diffuse_color(material):
     """
-
     :param material:
     :return: rgb value
     :rtype: tuple
-
     """
     logger.debug("material.diffuse_color(%s)", material)
-    return (material.diffuse_intensity * material.diffuse_color[0],
-            material.diffuse_intensity * material.diffuse_color[1],
-            material.diffuse_intensity * material.diffuse_color[2])
+    if hasattr(material, 'diffuse_intensity'):
+        return (material.diffuse_intensity * material.diffuse_color[0],
+                material.diffuse_intensity * material.diffuse_color[1],
+                material.diffuse_intensity * material.diffuse_color[2])
+    else:
+        # Fallback if diffuse_intensity does not exist
+        return (material.diffuse_color[0],
+                material.diffuse_color[1],
+                material.diffuse_color[2])
 
 
 @_material
@@ -175,17 +182,20 @@ def diffuse_map(material):
 @_material
 def emissive_color(material):
     """
-
     :param material:
     :return: rgb value
     :rtype: tuple
-
     """
     logger.debug("material.emissive_color(%s)", material)
     diffuse = diffuse_color(material)
-    return (material.emit * diffuse[0],
-            material.emit * diffuse[1],
-            material.emit * diffuse[2])
+    if hasattr(material, 'emit'):
+        return (material.emit * diffuse[0],
+                material.emit * diffuse[1],
+                material.emit * diffuse[2])
+    else:
+        # Fallback if emit does not exist
+        logger.warning("Material object has no attribute 'emit'")
+        return (0, 0, 0)  # Default emissive color
 
 
 @_material
@@ -240,8 +250,10 @@ def opacity(material):
     :rtype: float
 
     """
-    logger.debug("material.opacity(%s)", material)
-    return round(material.alpha, 2)
+    if material.blend_method in {'BLEND', 'CLIP'}:
+        return round(material.diffuse_color[3], 2)
+    else:
+        return 1.0
 
 
 @_material
@@ -264,13 +276,16 @@ def shading(material):
 @_material
 def specular_coef(material):
     """
-
     :param material:
     :rtype: float
-
     """
     logger.debug("material.specular_coef(%s)", material)
-    return material.specular_hardness
+    if hasattr(material, 'specular_hardness'):
+        return material.specular_hardness
+    else:
+        # Fallback if specular_hardness does not exist
+        logger.warning("Material object has no attribute 'specular_hardness'")
+        return 0.0  # Default value
 
 
 @_material
@@ -305,27 +320,28 @@ def specular_map(material):
 @_material
 def transparent(material):
     """
-
     :param material:
     :rtype: bool
-
     """
     logger.debug("material.transparent(%s)", material)
-    return material.use_transparency
+    if hasattr(material, 'use_transparency'):
+        return material.use_transparency
+    else:
+        # Fallback if use_transparency does not exist
+        logger.warning("Material object has no attribute 'use_transparency'")
+        return False  # Default value
 
 
 @_material
 def type(material):
     """
-
     :param material:
     :return: THREE compatible shader type
-
     """
     logger.debug("material.type(%s)", material)
-    if material.diffuse_shader != 'LAMBERT':
+    if hasattr(material, 'diffuse_shader') and material.diffuse_shader != 'LAMBERT':
         material_type = constants.BASIC
-    elif material.specular_intensity > 0:
+    elif hasattr(material, 'specular_intensity') and material.specular_intensity > 0:
         material_type = constants.PHONG
     else:
         material_type = constants.LAMBERT
@@ -336,13 +352,16 @@ def type(material):
 @_material
 def use_vertex_colors(material):
     """
-
     :param material:
     :rtype: bool
-
     """
     logger.debug("material.use_vertex_colors(%s)", material)
-    return material.use_vertex_color_paint
+    if hasattr(material, 'use_vertex_color_paint'):
+        return material.use_vertex_color_paint
+    else:
+        # Fallback if use_vertex_color_paint does not exist
+        logger.warning("Material object has no attribute 'use_vertex_color_paint'")
+        return False  # Default value
 
 
 def used_materials():
@@ -386,27 +405,30 @@ def wireframe(material):
 
     """
     logger.debug("material.wireframe(%s)", material)
-    return material.type == WIRE
+    ##return material.type == WIRE
+    return material.blend_method == 'BLEND'
 
 
 def _valid_textures(material, strict_use=True):
     """
-
     :param material:
     :rtype: generator
-
     """
-    for texture in material.texture_slots:
-        if not texture:
-            continue
-        if strict_use:
-            in_use = texture.use
-        else:
-            in_use = True
-        if not in_use:
-            continue
-        if not texture.texture or texture.texture.type != IMAGE:
-            logger.warning("Unable to export non-image texture %s", texture)
-            continue
-        logger.debug("Valid texture found %s", texture)
-        yield texture
+    logger.debug("material._valid_textures(%s)", material)
+    if hasattr(material, 'texture_slots'):
+        for texture in material.texture_slots:
+            if not texture:
+                continue
+            if strict_use:
+                in_use = texture.use
+            else:
+                in_use = True
+            if not in_use:
+                continue
+            if not texture.texture or texture.texture.type != IMAGE:
+                logger.warning("Unable to export non-image texture %s", texture)
+                continue
+            logger.debug("Valid texture found %s", texture)
+            yield texture
+    else:
+        logger.warning("Material object has no attribute 'texture_slots'")

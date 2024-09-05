@@ -14,29 +14,37 @@ class Texture(base_classes.BaseNode):
 
         if not img_inst:
             image_node = api.texture.image_node(self.node)
-            img_inst = image.Image(image_node.name, self.scene)
-            self.scene[constants.IMAGES].append(img_inst)
-
-
-        self[constants.IMAGE] = img_inst[constants.UUID]
-
+            if image_node is not None:
+                img_inst = image.Image(image_node.name, self.scene)
+                self.scene[constants.IMAGES].append(img_inst)
+            else:
+                img_inst = None
+                logger.warning("image_node is None for texture %s", self.node)
+        
+        if img_inst:
+            self[constants.IMAGE] = img_inst[constants.UUID]
+        
         wrap = api.texture.wrap(self.node)
-        self[constants.WRAP] = (num[wrap[0]], num[wrap[1]])
+        if wrap is not None:
+            self[constants.WRAP] = (num[wrap[0]], num[wrap[1]])
+            if constants.WRAPPING.REPEAT in wrap:
+                self[constants.REPEAT] = api.texture.repeat(self.node)
+                self[constants.ANISOTROPY] = api.texture.anisotropy(self.node)
+                self[constants.MAG_FILTER] = num[api.texture.mag_filter(self.node)]
+                self[constants.MIN_FILTER] = num[api.texture.min_filter(self.node)]
+                self[constants.MAPPING] = num[api.texture.mapping(self.node)]
+        else:
+            logger.warning("wrap is None for texture %s", self.node)
 
-        if constants.WRAPPING.REPEAT in wrap:
-            self[constants.REPEAT] = api.texture.repeat(self.node)
-
-        self[constants.ANISOTROPY] = api.texture.anisotropy(self.node)
-        self[constants.MAG_FILTER] = num[api.texture.mag_filter(self.node)]
-        self[constants.MIN_FILTER] = num[api.texture.min_filter(self.node)]
-        self[constants.MAPPING] = num[api.texture.mapping(self.node)]
+        
 
     @property
     def image(self):
         """
-
         :return: the image object of the current texture
         :rtype: image.Image
-
         """
-        return self.scene.image(self[constants.IMAGE])
+        if constants.IMAGE in self:
+            return self.scene.image(self[constants.IMAGE])
+        else:
+            return None

@@ -551,8 +551,11 @@ class Geometry(base_classes.BaseNode):
 
         if self.options.get(constants.SKINNING):
             logger.info("Parsing %s", constants.SKINNING)
-            influences = self.options.get(
-                constants.INFLUENCES_PER_VERTEX, 2)
+            influences = self.options.get(constants.INFLUENCES_PER_VERTEX, 2)
+            if isinstance(influences, (int, float)):
+                influences = int(influences)
+            else:
+                influences = 2  # Default to 2 if influences is not a real number
 
             self[constants.INFLUENCES_PER_VERTEX] = influences
             self[constants.SKIN_INDICES] = api.mesh.skin_indices(
