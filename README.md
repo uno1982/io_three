@@ -23,12 +23,15 @@ Goto Usage.
 ### Windows
 
 Should look like this:
+
 3.6 - C:\Program Files\Blender Foundation\Blender\3.6\scripts\addons
+
 4.2 - C:\Program Files\Blender Foundation\Blender 4.2\4.2\scripts\addons_core
 
 ### OSX
 
 In your user's library for user installed Blender addons:
+
 /Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
 
 ### Linux
