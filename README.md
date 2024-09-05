@@ -6,10 +6,12 @@ Exports Three.js' ASCII JSON format.
 
 The exporter (r69 and earlier) has been completely replaced. Please ensure you have removed the io_three_mesh addon from your Blender addons directory before installing the current addon (io_three).
 
+**Morph Target Exports** - currently returns an empty array `Return []` This needs to be reworked.
+**Export Options UI** - currently no longer functions and also needs to be reworked. The export to threejs/json currenly works via passing true to all options.
+
 ## Installation
 
-
-Recommended Blender version **>= 2.73.0**
+Recommended Blender version **This Branch is for Blender 3.6 I'll update this as more testing is done**
 
 Copy the io_three folder to the scripts/addons folder. If it doesn't exist, create it. The full path is OS-dependent (see below).
 
@@ -22,38 +24,31 @@ Goto Usage.
 
 Should look like this:
 
-    C:\Program Files\Blender Foundation\Blender\2.7X\scripts\addons
-    
-OR (for 2.6)
-    
-    C:\Users\USERNAME\AppData\Roaming\Blender Foundation\Blender\2.6X\scripts\addons
+    C:\Program Files\Blender Foundation\Blender\3.6X\scripts\addons
 
 ### OSX
 
 In your user's library for user installed Blender addons:
 
-    /Users/(myuser)/Library/Application Support/Blender/2.7X/scripts/addons
+    /Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
 
 ### Linux
 
 By default, this should look like:
 
-    /home/USERNAME/.config/blender/2.6X/scripts/addons
+    /home/USERNAME/.config/blender/3.6X/scripts/addons
 
-For Ubuntu users who installed Blender 2.68 via apt-get, this is the location:
+For Ubuntu users who installed Blender 3.6 via apt-get, this is the location:
 
     /usr/lib/blender/scripts/addons
-    
 
 ## Usage
 
 Activate the Import-Export addon under "User Preferences" > "Addons" and then use the regular Export menu within Blender, select `Three.js (json)`.
 
-
 ## Enabling msgpack
 
 To enable msgpack compression copy the msgpack to scripts/modules.
-
 
 ## Importer
 
