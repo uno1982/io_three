@@ -11,7 +11,7 @@ The exporter (r69 and earlier) has been completely replaced. Please ensure you h
 
 ## Installation
 
-Recommended Blender version **This Branch is for Blender 3.6 I'll update this as more testing is done**
+Recommended Blender version **This Branch is for Blender 3.6 - 4.2 I'll update this as more testing is done**
 
 Copy the io_three folder to the scripts/addons folder. If it doesn't exist, create it. The full path is OS-dependent (see below).
 
@@ -23,22 +23,21 @@ Goto Usage.
 ### Windows
 
 Should look like this:
-
-    C:\Program Files\Blender Foundation\Blender\3.6X\scripts\addons
+3.6 - C:\Program Files\Blender Foundation\Blender\3.6\scripts\addons
+4.2 - C:\Program Files\Blender Foundation\Blender 4.2\4.2\scripts\addons_core
 
 ### OSX
 
 In your user's library for user installed Blender addons:
-
-    /Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
+/Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
 
 ### Linux
 
 By default, this should look like:
 
-    /home/USERNAME/.config/blender/3.6X/scripts/addons
+    /home/USERNAME/.config/blender 4.2/4.2X/scripts/addons_core
 
-For Ubuntu users who installed Blender 3.6 via apt-get, this is the location:
+For Ubuntu users who installed Blender 4.2 via apt-get, this is the location:
 
     /usr/lib/blender/scripts/addons
 
