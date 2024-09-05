@@ -32,7 +32,7 @@ Should look like this:
 
 In your user's library for user installed Blender addons:
 
-/Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
+    /Users/(myuser)/Library/Application Support/Blender/3.6X/scripts/addons
 
 ### Linux
 
