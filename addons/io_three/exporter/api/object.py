@@ -412,7 +412,14 @@ def extract_mesh(obj, options, recalculate=False):
     new_mesh = mesh_node.copy()
 
     new_mesh.update(calc_edges=True, calc_edges_loose=True)
-    new_mesh.calc_normals()
+    
+    try:
+        #Blender 3.6 still uses
+        new_mesh.calc_normals()
+    except AttributeError:
+        #Deprecated Blender 4.2. Has no effect. Normals are calculated upon retrieval https://projects.blender.org/blender/blender/commit/ab5fc46872b9960b5bb50d98147bea0d677028b9
+        pass
+    
     # Ensure scale_ is a real number
     scale_ = options.get(constants.SCALE, 1)
     if isinstance(scale_, (int, float)):
